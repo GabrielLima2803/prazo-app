@@ -1,14 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { createHttpApi } from '@/api/client';
 import { Button } from '@/components/Button';
+import { Field } from '@/components/Field';
+import { Notice } from '@/components/Notice';
 import { Text } from '@/components/Text';
 import { useConnection } from '@/state/connection';
-import { fonts, radius, spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 export default function ConnectScreen() {
@@ -59,15 +61,8 @@ export default function ConnectScreen() {
 
         <View style={{ gap: spacing.md }}>
           <Field label="Servidor" value={baseUrl} onChangeText={setBaseUrl} placeholder="http://192.168.0.10:8080" keyboardType="url" />
-          <Field label="Token da API" value={token} onChangeText={setToken} placeholder="PRAZO_API_TOKEN" secureTextEntry />
-          {error && (
-            <View style={[styles.error, { backgroundColor: 'rgba(248,113,113,0.12)' }]}>
-              <Ionicons name="alert-circle" size={18} color={colors.danger} />
-              <Text variant="caption" tone="danger" style={{ flex: 1 }}>
-                {error}
-              </Text>
-            </View>
-          )}
+          <Field label="Token da API" value={token} onChangeText={setToken} placeholder="PRAZO_API_TOKEN" secret />
+          {error && <Notice tone="danger" message={error} />}
           <Button label="Conectar" icon="arrow-forward" loading={testing} onPress={submit} />
           <Button label="Explorar com dados de exemplo" variant="ghost" icon="flask-outline" onPress={() => connect({ mode: 'demo' })} />
         </View>
@@ -92,30 +87,6 @@ function Feature({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>['
   );
 }
 
-function Field({ label, ...props }: TextInputProps & { label: string }) {
-  const { colors } = useTheme();
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={{ gap: 6 }}>
-      <Text variant="caption" tone="muted">
-        {label}
-      </Text>
-      <TextInput
-        {...props}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholderTextColor={colors.textSubtle}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[
-          styles.input,
-          { color: colors.text, backgroundColor: colors.surface, borderColor: focused ? colors.primary : colors.border },
-        ]}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flexGrow: 1, paddingHorizontal: spacing.xl, gap: spacing.xl, justifyContent: 'center' },
   brand: { alignItems: 'center', gap: spacing.sm },
@@ -123,6 +94,4 @@ const styles = StyleSheet.create({
   features: { gap: spacing.md },
   feature: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   featureIcon: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  input: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 13, fontFamily: fonts.medium, fontSize: 15 },
-  error: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', borderRadius: radius.md, padding: spacing.md },
 });

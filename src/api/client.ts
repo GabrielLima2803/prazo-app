@@ -1,4 +1,4 @@
-import type { Course, DeadlineList, Meta, PrazoApi, Preferences, Run, Status } from './types';
+import type { Course, DeadlineList, Meta, MoodleStatus, PrazoApi, Preferences, Run, Status } from './types';
 
 /** Garante coleções vazias mesmo se o servidor mandar null. */
 export function normalizePreferences(p: Partial<Preferences> | null): Preferences {
@@ -14,6 +14,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    /** Código estável do servidor, ex.: "moodle_not_connected", "invalid_login". */
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -46,7 +48,7 @@ export function createHttpApi(baseUrl: string, token: string): PrazoApi {
     const body = await res.json().catch(() => null);
     if (!res.ok) {
       const msg = res.status === 401 ? 'Token inválido.' : (body?.error ?? `Erro ${res.status}`);
-      throw new ApiError(msg, res.status);
+      throw new ApiError(msg, res.status, body?.code);
     }
     return body as T;
   }
@@ -60,5 +62,10 @@ export function createHttpApi(baseUrl: string, token: string): PrazoApi {
     savePreferences: (p) =>
       request<Preferences>('/api/v1/preferences', { method: 'PUT', body: JSON.stringify(p) }).then(normalizePreferences),
     sync: () => request<Run>('/api/v1/sync', { method: 'POST' }, SYNC_TIMEOUT_MS),
+    moodle: () => request<MoodleStatus>('/api/v1/moodle'),
+    // Login e teste do calendário passam pelo Moodle: dão mais tempo.
+    moodleLogin: (req) => request<MoodleStatus>('/api/v1/moodle/login', { method: 'POST', body: JSON.stringify(req) }, 60_000),
+    moodleICal: (icalUrl) => request<MoodleStatus>('/api/v1/moodle/ical', { method: 'POST', body: JSON.stringify({ icalUrl }) }, 60_000),
+    moodleDisconnect: () => request<MoodleStatus>('/api/v1/moodle', { method: 'DELETE' }),
   };
 }

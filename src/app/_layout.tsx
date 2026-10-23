@@ -54,6 +54,7 @@ function Navigator() {
         <Stack.Protected guard={connection !== null}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="deadline/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="moodle" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={connection === null}>
           <Stack.Screen name="connect" options={{ animation: 'fade' }} />

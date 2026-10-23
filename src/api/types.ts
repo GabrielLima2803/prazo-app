@@ -70,6 +70,24 @@ export interface Preferences {
   reminders: Partial<Record<DeadlineType, number[]>>;
 }
 
+export type MoodleMethod = 'login' | 'ical' | 'env';
+
+export interface MoodleStatus {
+  connected: boolean;
+  method?: MoodleMethod;
+  baseUrl?: string;
+  fullName?: string;
+  siteName?: string;
+  connectedAt?: string;
+  events?: number;
+}
+
+export interface MoodleLogin {
+  baseUrl: string;
+  username: string;
+  password: string;
+}
+
 export interface PrazoApi {
   status(): Promise<Status>;
   meta(): Promise<Meta>;
@@ -78,4 +96,8 @@ export interface PrazoApi {
   preferences(): Promise<Preferences>;
   savePreferences(p: Preferences): Promise<Preferences>;
   sync(): Promise<Run>;
+  moodle(): Promise<MoodleStatus>;
+  moodleLogin(req: MoodleLogin): Promise<MoodleStatus>;
+  moodleICal(icalUrl: string): Promise<MoodleStatus>;
+  moodleDisconnect(): Promise<MoodleStatus>;
 }

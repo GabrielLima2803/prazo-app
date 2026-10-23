@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/client';
 import { useDeadlines, useRefreshDeadlines } from '@/api/hooks';
 import type { Deadline } from '@/api/types';
+import { ConnectMoodleCTA } from '@/components/ConnectMoodleCTA';
 import { DeadlineCard } from '@/components/DeadlineCard';
 import { NextUpCard } from '@/components/NextUpCard';
 import { Segmented } from '@/components/Segmented';
@@ -47,6 +49,7 @@ export default function DeadlinesScreen() {
   };
 
   if (isPending) return <Loading />;
+  if (error instanceof ApiError && error.code === 'moodle_not_connected') return <ConnectMoodleCTA />;
   if (error) return <ErrorState message={error.message} onRetry={refetch} />;
 
   const header = (

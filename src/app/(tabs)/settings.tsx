@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useMeta, usePreferences, useSavePreferences, useStatus, useSyncNow } from '@/api/hooks';
+import { useDisconnectMoodle, useMeta, useMoodle, usePreferences, useSavePreferences, useStatus, useSyncNow } from '@/api/hooks';
 import type { DeadlineType, Preferences } from '@/api/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -34,6 +35,17 @@ export default function SettingsScreen() {
   const prefs = usePreferences();
   const save = useSavePreferences();
   const sync = useSyncNow();
+  const moodle = useMoodle();
+  const disconnectMoodle = useDisconnectMoodle();
+  const router = useRouter();
+
+  const confirmMoodleLogout = () => {
+    if (Platform.OS === 'web') return void disconnectMoodle.mutate();
+    Alert.alert('Sair do Moodle', 'O Prazo para de buscar os seus prazos até você conectar de novo.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: () => disconnectMoodle.mutate() },
+    ]);
+  };
 
   const current: Preferences | undefined = prefs.data;
   const update = (patch: Partial<Preferences>) => current && save.mutate({ ...current, ...patch });
@@ -67,6 +79,35 @@ export default function SettingsScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxl }}>
       <Text variant="display">Ajustes</Text>
+
+      <SectionTitle title="Moodle" />
+      <Card style={{ gap: spacing.lg }}>
+        <View style={styles.row}>
+          <IconTile icon="school" color={moodle.data?.connected ? '#F98012' : colors.textSubtle} />
+          <View style={{ flex: 1 }}>
+            <Text variant="headline" numberOfLines={1}>
+              {moodle.data?.connected ? (moodle.data.fullName ?? moodle.data.siteName ?? 'Conta conectada') : 'Não conectado'}
+            </Text>
+            <Text variant="caption" tone="muted" numberOfLines={1}>
+              {moodle.data?.connected
+                ? `${moodle.data.baseUrl?.replace('https://', '') ?? ''}${moodle.data.method === 'ical' ? ' · URL do calendário' : moodle.data.method === 'env' ? ' · configurado no servidor' : ''}`
+                : 'Conecte para trazer os seus prazos'}
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <Button
+            label={moodle.data?.connected ? 'Trocar conta' : 'Conectar Moodle'}
+            variant={moodle.data?.connected ? 'secondary' : 'primary'}
+            icon="log-in-outline"
+            onPress={() => router.push('/moodle')}
+            style={{ flex: 1 }}
+          />
+          {moodle.data?.connected && moodle.data.method !== 'env' && (
+            <Button label="Sair" variant="ghost" icon="log-out-outline" loading={disconnectMoodle.isPending} onPress={confirmMoodleLogout} />
+          )}
+        </View>
+      </Card>
 
       <SectionTitle title="Google Agenda" />
       <Card style={{ gap: spacing.lg }}>

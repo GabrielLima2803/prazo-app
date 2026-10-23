@@ -1,4 +1,5 @@
-import type { Course, Deadline, DeadlineType, Meta, PrazoApi, Preferences, Run } from './types';
+import { ApiError } from './client';
+import type { Course, Deadline, DeadlineType, Meta, MoodleStatus, PrazoApi, Preferences, Run } from './types';
 
 // Modo demonstração: mesmos contratos da API, dados em memória. Permite ver o
 // app sem um servidor rodando.
@@ -77,9 +78,17 @@ function build(prefs: Preferences): Deadline[] {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const demoAccount: MoodleStatus = {
+  connected: true, method: 'login', baseUrl: 'https://moodle.joinville.udesc.br', fullName: 'Aluno de Exemplo', siteName: 'Moodle CCT',
+};
+
 export function createDemoApi(): PrazoApi {
   let prefs: Preferences = { hiddenCourses: [], hiddenTypes: [], courseColors: {}, reminders: {} };
   let lastRun: Run | null = null;
+  let moodle: MoodleStatus = { ...demoAccount, connectedAt: new Date().toISOString() };
+  const requireMoodle = () => {
+    if (!moodle.connected) throw new ApiError('Nenhuma conta do Moodle conectada', 409, 'moodle_not_connected');
+  };
 
   return {
     async status() {
@@ -91,10 +100,12 @@ export function createDemoApi(): PrazoApi {
     },
     async deadlines() {
       await wait(350);
+      requireMoodle();
       return { deadlines: build(prefs), fetchedAt: new Date().toISOString() };
     },
     async courses() {
       await wait(200);
+      requireMoodle();
       const all = build(prefs);
       return Object.entries(courses).map(([code, c]): Course => {
         const mine = all.filter((d) => d.courseCode === code);
@@ -115,8 +126,27 @@ export function createDemoApi(): PrazoApi {
       prefs = { ...p, hiddenCourses: [...new Set(p.hiddenCourses.map((c) => c.toUpperCase()))].sort() };
       return prefs;
     },
+    async moodle() {
+      return moodle;
+    },
+    async moodleLogin({ username, password }) {
+      await wait(1200);
+      if (!username.trim() || password.length < 3) throw new ApiError('Usuário ou senha inválidos', 422, 'invalid_login');
+      moodle = { ...demoAccount, connectedAt: new Date().toISOString(), events: seeds.length };
+      return moodle;
+    },
+    async moodleICal() {
+      await wait(1000);
+      moodle = { ...demoAccount, method: 'ical', fullName: undefined, connectedAt: new Date().toISOString(), events: seeds.length };
+      return moodle;
+    },
+    async moodleDisconnect() {
+      moodle = { connected: false };
+      return moodle;
+    },
     async sync() {
       await wait(1600);
+      requireMoodle();
       const visible = build(prefs).filter((d) => !d.hidden);
       const now = new Date().toISOString();
       lastRun = { startedAt: now, finishedAt: now, ok: true, total: seeds.length, created: lastRun ? 0 : visible.length, updated: lastRun ? visible.length : 0, hidden: seeds.length - visible.length, failed: 0 };
