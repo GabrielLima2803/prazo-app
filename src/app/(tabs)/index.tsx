@@ -65,7 +65,7 @@ export default function DeadlinesScreen() {
         <Text variant="caption" tone="muted">
           {formatFullDate(new Date(now))}
         </Text>
-        <Text variant="display">{greeting(new Date(now))} 👋</Text>
+        <Text variant="display">{greeting(new Date(now))}</Text>
       </View>
       {status.data && !status.data.google.authorized && (
         <Pressable onPress={() => router.push('/settings')} accessibilityRole="button">

@@ -8,6 +8,9 @@ import { storage } from '@/lib/storage';
 /** server: sessão emitida pelo servidor depois do login com o Moodle. */
 export type Connection = { mode: 'demo' } | { mode: 'server'; baseUrl: string; token: string };
 
+/** Por que o app voltou para o login, para explicar ao usuário. */
+export type LogoutReason = 'session_expired' | 'moodle_reauth';
+
 interface ConnectionState {
   ready: boolean;
   connection: Connection | null;
@@ -16,9 +19,10 @@ interface ConnectionState {
   key: string;
   /** Acabou de entrar: mostrar o passo do Google antes dos prazos. */
   onboarding: boolean;
+  logoutReason: LogoutReason | null;
   connect(c: Connection): Promise<void>;
   finishOnboarding(): void;
-  disconnect(): Promise<void>;
+  disconnect(reason?: LogoutReason): Promise<void>;
 }
 
 const STORAGE_KEY = 'prazo.connection';
@@ -33,6 +37,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [connection, setConnection] = useState<Connection | null>(null);
   const [onboarding, setOnboarding] = useState(false);
+  const [logoutReason, setLogoutReason] = useState<LogoutReason | null>(null);
 
   useEffect(() => {
     storage
@@ -46,16 +51,21 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async (c: Connection) => {
     await storage.set(STORAGE_KEY, JSON.stringify(c));
+    setLogoutReason(null);
     setOnboarding(true);
     setConnection(c);
   }, []);
 
   // Sai mesmo se o servidor estiver fora: a sessão local some de qualquer jeito.
-  const disconnect = useCallback(async () => {
-    await api?.logout().catch(() => undefined);
-    await storage.remove(STORAGE_KEY);
-    setConnection(null);
-  }, [api]);
+  const disconnect = useCallback(
+    async (reason?: LogoutReason) => {
+      await api?.logout().catch(() => undefined);
+      await storage.remove(STORAGE_KEY);
+      setLogoutReason(reason ?? null);
+      setConnection(null);
+    },
+    [api],
+  );
 
   const finishOnboarding = useCallback(() => setOnboarding(false), []);
 
@@ -66,11 +76,12 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       api,
       key: connection ? (connection.mode === 'demo' ? 'demo' : connection.baseUrl) : 'none',
       onboarding,
+      logoutReason,
       connect,
       finishOnboarding,
       disconnect,
     }),
-    [ready, connection, api, onboarding, connect, finishOnboarding, disconnect],
+    [ready, connection, api, onboarding, logoutReason, connect, finishOnboarding, disconnect],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

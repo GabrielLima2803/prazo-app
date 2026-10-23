@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -37,14 +37,23 @@ function Navigator() {
   const { ready, connection, disconnect } = useConnection();
   const queryClient = useQueryClient();
 
-  // Sessão expirada ou revogada: volta para o login em vez de mostrar erro.
+  // Sessão expirada ou senha do Moodle trocada: volta para o login com o
+  // motivo, em vez de mostrar um erro genérico.
+  // Só o primeiro erro conta: ao sair, as consultas que ainda estavam no ar
+  // voltam 401 e trocariam o motivo por "sessão expirada".
+  const leaving = useRef(false);
+  useEffect(() => {
+    if (connection) leaving.current = false;
+  }, [connection]);
   useEffect(
     () =>
       queryClient.getQueryCache().subscribe((event) => {
         const error = event.query.state.error;
-        if (event.type === 'updated' && error instanceof ApiError && error.code === 'unauthorized') {
+        if (event.type !== 'updated' || !(error instanceof ApiError) || leaving.current) return;
+        if (error.code === 'unauthorized' || error.code === 'moodle_reauth') {
+          leaving.current = true;
           queryClient.clear();
-          disconnect();
+          disconnect(error.code === 'unauthorized' ? 'session_expired' : 'moodle_reauth');
         }
       }),
     [queryClient, disconnect],
