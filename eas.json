@@ -1,0 +1,16 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_PRAZO_SERVER": "https://prazo.tailf38db5.ts.net" }
+    },
+    "production": {
+      "env": { "EXPO_PUBLIC_PRAZO_SERVER": "https://prazo.tailf38db5.ts.net" }
+    }
+  }
+}

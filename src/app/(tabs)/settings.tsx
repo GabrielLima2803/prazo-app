@@ -15,7 +15,7 @@ import {
   useStatus,
   useSyncNow,
 } from '@/api/hooks';
-import type { DeadlineType, Preferences } from '@/api/types';
+import type { DeadlineType, Preferences, Run } from '@/api/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
@@ -149,15 +149,16 @@ export default function SettingsScreen() {
             <View style={[styles.syncInfo, { backgroundColor: colors.surfaceRaised }]}>
               <Stat label="Última" value={last ? relative(new Date(last.finishedAt), now) : '—'} />
               <Stat label="Próxima" value={status.data?.nextRun ? relative(new Date(status.data.nextRun), now) : '—'} />
-              <Stat label="Na agenda" value={last?.ok ? String(last.created + last.updated) : '—'} />
+              <Stat label="Na agenda" value={last?.ok ? String(last.total - last.hidden) : '—'} />
             </View>
             {syncError && <Notice tone="danger" message={syncError} />}
-            {sync.data?.ok && !sync.isPending && (
+            {sync.data?.ok && !sync.isPending && <Notice tone="success" message={syncSummary(sync.data)} />}
+            {last?.deleteBlocked ? (
               <Notice
-                tone="success"
-                message={`${sync.data.created} criado(s), ${sync.data.updated} atualizado(s)${sync.data.hidden ? `, ${sync.data.hidden} oculto(s)` : ''}.`}
+                tone="info"
+                message={`${last.deleteBlocked} prazos sumiram de uma vez do Moodle. Por segurança, nada foi apagado da agenda.`}
               />
-            )}
+            ) : null}
             <Button label={sync.isPending ? 'Sincronizando…' : 'Sincronizar agora'} icon="sync" loading={sync.isPending} onPress={runSync} />
           </>
         )}
@@ -232,6 +233,15 @@ export default function SettingsScreen() {
       </Text>
     </ScrollView>
   );
+}
+
+function syncSummary(r: Run): string {
+  const parts = [
+    r.created && `${r.created} novo(s)`,
+    r.updated && `${r.updated} atualizado(s)`,
+    r.deleted && `${r.deleted} removido(s)`,
+  ].filter(Boolean);
+  return parts.length ? `Agenda atualizada: ${parts.join(', ')}.` : 'Tudo em dia: nada mudou desde a última vez.';
 }
 
 function IconTile({ icon, color }: { icon: ComponentProps<typeof Ionicons>['name']; color: string }) {

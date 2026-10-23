@@ -143,7 +143,11 @@ export function createDemoApi(): PrazoApi {
       await wait(1600);
       const visible = build(prefs).filter((d) => !d.hidden);
       const now = new Date().toISOString();
-      lastRun = { startedAt: now, finishedAt: now, ok: true, total: seeds.length, created: lastRun ? 0 : visible.length, updated: lastRun ? visible.length : 0, hidden: seeds.length - visible.length, failed: 0 };
+      lastRun = {
+        startedAt: now, finishedAt: now, ok: true, total: seeds.length,
+        created: lastRun ? 0 : visible.length, updated: 0, unchanged: lastRun ? visible.length : 0,
+        deleted: 0, deleteBlocked: 0, hidden: seeds.length - visible.length, failed: 0,
+      };
       return lastRun;
     },
   };

@@ -47,6 +47,9 @@ export interface Run {
   total: number;
   created: number;
   updated: number;
+  unchanged: number;
+  deleted: number;
+  deleteBlocked: number;
   hidden: number;
   failed: number;
 }
