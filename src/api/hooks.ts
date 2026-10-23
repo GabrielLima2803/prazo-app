@@ -1,4 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 import { useConnection } from '@/state/connection';
 
@@ -109,5 +112,46 @@ export function useDisconnectMoodle() {
       qc.resetQueries({ queryKey: [key, 'deadlines'] });
       qc.resetQueries({ queryKey: [key, 'courses'] });
     },
+  });
+}
+
+const GOOGLE_POLL_MS = 2_000;
+const GOOGLE_WAIT_MS = 3 * 60_000;
+
+/**
+ * Abre o consentimento do Google numa sessão de autenticação do sistema. O
+ * Google devolve para o servidor (HTTPS público), que salva o token e manda o
+ * navegador de volta ao app. A confirmação vem do /status, não do navegador:
+ * o usuário pode fechar a aba antes do redirecionamento.
+ */
+export function useConnectGoogle() {
+  const { api, key } = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      // No navegador (expo web) o retorno seria http, que o servidor recusa.
+      const returnTo = Platform.OS === 'web' ? undefined : Linking.createURL('google');
+      const { authUrl } = await api.googleAuth(returnTo);
+      if (returnTo) await WebBrowser.openAuthSessionAsync(authUrl, returnTo);
+      else await WebBrowser.openBrowserAsync(authUrl);
+
+      const deadline = Date.now() + GOOGLE_WAIT_MS;
+      while (Date.now() < deadline) {
+        const status = await api.status();
+        if (status.google.authorized) return status;
+        await new Promise((r) => setTimeout(r, GOOGLE_POLL_MS));
+      }
+      throw new Error('Não recebemos a autorização do Google. Tente de novo.');
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: [key] }),
+  });
+}
+
+export function useDisconnectGoogle() {
+  const { api, key } = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.googleDisconnect(),
+    onSettled: () => qc.invalidateQueries({ queryKey: [key, 'status'] }),
   });
 }

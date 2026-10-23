@@ -25,7 +25,8 @@
       "expo-router",
       "expo-status-bar",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "expo-web-browser"
     ],
     "scheme": "prazo",
     "backgroundColor": "#0B0D12",

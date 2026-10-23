@@ -1,13 +1,16 @@
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { RefreshControl, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
-import { useDeadlines, useRefreshDeadlines } from '@/api/hooks';
+import { useDeadlines, useRefreshDeadlines, useStatus } from '@/api/hooks';
 import type { Deadline } from '@/api/types';
 import { ConnectMoodleCTA } from '@/components/ConnectMoodleCTA';
 import { DeadlineCard } from '@/components/DeadlineCard';
 import { NextUpCard } from '@/components/NextUpCard';
+import { Notice } from '@/components/Notice';
+import { Pressable } from '@/components/Pressable';
 import { Segmented } from '@/components/Segmented';
 import { StatTile } from '@/components/StatTile';
 import { Empty, ErrorState, Loading } from '@/components/States';
@@ -28,6 +31,8 @@ export default function DeadlinesScreen() {
   const [filter, setFilter] = useState<Filter>('upcoming');
   const { data, isPending, error, refetch } = useDeadlines();
   const refresh = useRefreshDeadlines();
+  const status = useStatus();
+  const router = useRouter();
 
   const visible = useMemo(() => (data?.deadlines ?? []).filter((d) => !d.hidden), [data]);
   const upcoming = useMemo(() => visible.filter((d) => dueOf(d).getTime() >= now), [visible, now]);
@@ -60,6 +65,11 @@ export default function DeadlinesScreen() {
         </Text>
         <Text variant="display">{greeting(new Date(now))} 👋</Text>
       </View>
+      {status.data && !status.data.google.authorized && (
+        <Pressable onPress={() => router.push('/settings')} accessibilityRole="button">
+          <Notice tone="info" message="Conecte o Google Agenda em Ajustes para receber os prazos e lembretes na sua agenda." />
+        </Pressable>
+      )}
       {nextUp && <NextUpCard deadline={nextUp} now={now} />}
       <View style={styles.stats}>
         <StatTile value={stats.today} label="em 24 h" accent={stats.today > 0 ? colors.danger : undefined} />

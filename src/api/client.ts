@@ -67,5 +67,7 @@ export function createHttpApi(baseUrl: string, token: string): PrazoApi {
     moodleLogin: (req) => request<MoodleStatus>('/api/v1/moodle/login', { method: 'POST', body: JSON.stringify(req) }, 60_000),
     moodleICal: (icalUrl) => request<MoodleStatus>('/api/v1/moodle/ical', { method: 'POST', body: JSON.stringify({ icalUrl }) }, 60_000),
     moodleDisconnect: () => request<MoodleStatus>('/api/v1/moodle', { method: 'DELETE' }),
+    googleAuth: (returnTo) => request<{ authUrl: string }>('/api/v1/google/auth', { method: 'POST', body: JSON.stringify({ returnTo }) }),
+    googleDisconnect: () => request<void>('/api/v1/google', { method: 'DELETE' }),
   };
 }

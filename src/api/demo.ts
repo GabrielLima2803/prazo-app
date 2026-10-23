@@ -86,6 +86,7 @@ export function createDemoApi(): PrazoApi {
   let prefs: Preferences = { hiddenCourses: [], hiddenTypes: [], courseColors: {}, reminders: {} };
   let lastRun: Run | null = null;
   let moodle: MoodleStatus = { ...demoAccount, connectedAt: new Date().toISOString() };
+  let googleAuthorized = true;
   const requireMoodle = () => {
     if (!moodle.connected) throw new ApiError('Nenhuma conta do Moodle conectada', 409, 'moodle_not_connected');
   };
@@ -93,7 +94,12 @@ export function createDemoApi(): PrazoApi {
   return {
     async status() {
       await wait(150);
-      return { now: new Date().toISOString(), google: { authorized: true, calendarName: 'Prazo — UDESC' }, lastRun, nextRun: new Date(Date.now() + 27 * 60_000).toISOString() };
+      return {
+        now: new Date().toISOString(),
+        google: { authorized: googleAuthorized, calendarName: 'Prazo — UDESC', appAuth: true },
+        lastRun,
+        nextRun: new Date(Date.now() + 27 * 60_000).toISOString(),
+      };
     },
     async meta() {
       return { palette, types: (Object.keys(labels) as DeadlineType[]).map((id) => ({ id, label: labels[id], defaultReminders: defaults[id] })) };
@@ -139,6 +145,15 @@ export function createDemoApi(): PrazoApi {
       await wait(1000);
       moodle = { ...demoAccount, method: 'ical', fullName: undefined, connectedAt: new Date().toISOString(), events: seeds.length };
       return moodle;
+    },
+    async googleAuth() {
+      // Na demonstração não há Google de verdade: a autorização "acontece"
+      // logo depois que o navegador fecha.
+      setTimeout(() => (googleAuthorized = true), 1500);
+      return { authUrl: 'https://accounts.google.com/' };
+    },
+    async googleDisconnect() {
+      googleAuthorized = false;
     },
     async moodleDisconnect() {
       moodle = { connected: false };

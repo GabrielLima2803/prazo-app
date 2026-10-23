@@ -53,7 +53,8 @@ export interface Run {
 
 export interface Status {
   now: string;
-  google: { authorized: boolean; calendarName: string };
+  /** appAuth: o servidor permite autorizar o Google pelo app. */
+  google: { authorized: boolean; calendarName: string; appAuth: boolean };
   lastRun: Run | null;
   nextRun: string | null;
 }
@@ -100,4 +101,6 @@ export interface PrazoApi {
   moodleLogin(req: MoodleLogin): Promise<MoodleStatus>;
   moodleICal(icalUrl: string): Promise<MoodleStatus>;
   moodleDisconnect(): Promise<MoodleStatus>;
+  googleAuth(returnTo?: string): Promise<{ authUrl: string }>;
+  googleDisconnect(): Promise<void>;
 }

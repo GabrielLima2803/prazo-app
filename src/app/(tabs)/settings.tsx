@@ -6,11 +6,22 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useDisconnectMoodle, useMeta, useMoodle, usePreferences, useSavePreferences, useStatus, useSyncNow } from '@/api/hooks';
+import {
+  useConnectGoogle,
+  useDisconnectGoogle,
+  useDisconnectMoodle,
+  useMeta,
+  useMoodle,
+  usePreferences,
+  useSavePreferences,
+  useStatus,
+  useSyncNow,
+} from '@/api/hooks';
 import type { DeadlineType, Preferences } from '@/api/types';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { Notice } from '@/components/Notice';
 import { SectionTitle } from '@/components/SectionTitle';
 import { Text } from '@/components/Text';
 import { Toggle } from '@/components/Toggle';
@@ -37,6 +48,8 @@ export default function SettingsScreen() {
   const sync = useSyncNow();
   const moodle = useMoodle();
   const disconnectMoodle = useDisconnectMoodle();
+  const connectGoogle = useConnectGoogle();
+  const disconnectGoogle = useDisconnectGoogle();
   const router = useRouter();
 
   const confirmMoodleLogout = () => {
@@ -116,35 +129,60 @@ export default function SettingsScreen() {
           <View style={{ flex: 1 }}>
             <Text variant="headline">{google?.calendarName ?? 'Prazo — UDESC'}</Text>
             <Text variant="caption" tone="muted">
-              {google === undefined ? 'Verificando…' : google.authorized ? 'Conectado ao Google' : 'Rode "prazo auth" no servidor'}
+              {google === undefined
+                ? 'Verificando…'
+                : google.authorized
+                  ? 'Conectado ao Google'
+                  : google.appAuth
+                    ? 'Ainda não conectado'
+                    : 'Autorização pelo app não configurada'}
             </Text>
           </View>
+          {google?.authorized && google.appAuth && (
+            <Text variant="caption" tone="subtle" onPress={() => disconnectGoogle.mutate()} accessibilityRole="button">
+              Desconectar
+            </Text>
+          )}
         </View>
 
-        <View style={[styles.syncInfo, { backgroundColor: colors.surfaceRaised }]}>
-          <Stat label="Última" value={last ? relative(new Date(last.finishedAt), now) : '—'} />
-          <Stat label="Próxima" value={status.data?.nextRun ? relative(new Date(status.data.nextRun), now) : '—'} />
-          <Stat label="Na agenda" value={last?.ok ? String(last.created + last.updated) : '—'} />
-        </View>
-
-        {syncError && (
-          <View style={[styles.alert, { backgroundColor: 'rgba(248,113,113,0.12)' }]}>
-            <Ionicons name="alert-circle" size={18} color={colors.danger} />
-            <Text variant="caption" tone="danger" style={{ flex: 1 }}>
-              {syncError}
-            </Text>
-          </View>
+        {google && !google.authorized ? (
+          <>
+            {google.appAuth ? (
+              <Notice tone="info" message="Conecte para criar a agenda “Prazo — UDESC” com os seus prazos e lembretes." />
+            ) : (
+              <Notice tone="info" message="No servidor, configure PRAZO_PUBLIC_URL (Tailscale) e a credencial web, ou rode “prazo auth” no computador." />
+            )}
+            {connectGoogle.error && <Notice tone="danger" message={connectGoogle.error.message} />}
+            {google.appAuth && (
+              <Button
+                label={connectGoogle.isPending ? 'Aguardando o Google…' : 'Conectar Google Agenda'}
+                icon="logo-google"
+                loading={connectGoogle.isPending}
+                onPress={() =>
+                  connectGoogle.mutate(undefined, {
+                    onSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+                  })
+                }
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <View style={[styles.syncInfo, { backgroundColor: colors.surfaceRaised }]}>
+              <Stat label="Última" value={last ? relative(new Date(last.finishedAt), now) : '—'} />
+              <Stat label="Próxima" value={status.data?.nextRun ? relative(new Date(status.data.nextRun), now) : '—'} />
+              <Stat label="Na agenda" value={last?.ok ? String(last.created + last.updated) : '—'} />
+            </View>
+            {syncError && <Notice tone="danger" message={syncError} />}
+            {sync.data?.ok && !sync.isPending && (
+              <Notice
+                tone="success"
+                message={`${sync.data.created} criado(s), ${sync.data.updated} atualizado(s)${sync.data.hidden ? `, ${sync.data.hidden} oculto(s)` : ''}.`}
+              />
+            )}
+            <Button label={sync.isPending ? 'Sincronizando…' : 'Sincronizar agora'} icon="sync" loading={sync.isPending} onPress={runSync} />
+          </>
         )}
-        {sync.data?.ok && !sync.isPending && (
-          <View style={[styles.alert, { backgroundColor: 'rgba(52,211,153,0.12)' }]}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-            <Text variant="caption" tone="success" style={{ flex: 1 }}>
-              {sync.data.created} criado(s), {sync.data.updated} atualizado(s){sync.data.hidden ? `, ${sync.data.hidden} oculto(s)` : ''}.
-            </Text>
-          </View>
-        )}
-
-        <Button label={sync.isPending ? 'Sincronizando…' : 'Sincronizar agora'} icon="sync" loading={sync.isPending} onPress={runSync} />
       </Card>
 
       <SectionTitle title="Lembretes por tipo" trailing={`até ${MAX_REMINDERS} por evento`} />
@@ -258,5 +296,4 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   iconTile: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   syncInfo: { flexDirection: 'row', borderRadius: radius.md, padding: spacing.md, gap: spacing.md },
-  alert: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', borderRadius: radius.md, padding: spacing.md },
 });
