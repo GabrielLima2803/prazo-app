@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,8 +18,11 @@ export default function ConnectScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { connect } = useConnection();
-  const [baseUrl, setBaseUrl] = useState('http://192.168.0.14:8080');
-  const [token, setToken] = useState('');
+  // Link de pareamento (QR gerado no computador): prazo://connect?url=…&token=…
+  const params = useLocalSearchParams<{ url?: string; token?: string }>();
+  const [baseUrl, setBaseUrl] = useState(params.url ?? 'https://prazo.tailf38db5.ts.net');
+  const [token, setToken] = useState(params.token ?? '');
+  const autoSubmitted = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
 
@@ -37,6 +41,15 @@ export default function ConnectScreen() {
       setTesting(false);
     }
   };
+
+  useEffect(() => {
+    if (params.url && params.token && !autoSubmitted.current) {
+      autoSubmitted.current = true;
+      submit();
+    }
+    // submit lê o estado atual; só deve disparar uma vez, na chegada pelo link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.url, params.token]);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.background }}>
@@ -68,7 +81,7 @@ export default function ConnectScreen() {
         </View>
 
         <Text variant="caption" tone="subtle" style={{ textAlign: 'center' }}>
-          No computador, rode “prazo serve” e use o endereço que ele mostrar. O celular precisa estar na mesma rede Wi-Fi.
+          No computador, rode “prazo serve” e leia o QR de pareamento, ou informe o endereço e o token que ele mostrar.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
