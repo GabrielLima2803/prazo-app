@@ -1,4 +1,3 @@
-import { ApiError } from './client';
 import type { Course, Deadline, DeadlineType, Meta, MoodleStatus, PrazoApi, Preferences, Run } from './types';
 
 // Modo demonstração: mesmos contratos da API, dados em memória. Permite ver o
@@ -85,11 +84,8 @@ const demoAccount: MoodleStatus = {
 export function createDemoApi(): PrazoApi {
   let prefs: Preferences = { hiddenCourses: [], hiddenTypes: [], courseColors: {}, reminders: {} };
   let lastRun: Run | null = null;
-  let moodle: MoodleStatus = { ...demoAccount, connectedAt: new Date().toISOString() };
+  const moodle: MoodleStatus = { ...demoAccount, connectedAt: new Date().toISOString() };
   let googleAuthorized = true;
-  const requireMoodle = () => {
-    if (!moodle.connected) throw new ApiError('Nenhuma conta do Moodle conectada', 409, 'moodle_not_connected');
-  };
 
   return {
     async status() {
@@ -106,12 +102,10 @@ export function createDemoApi(): PrazoApi {
     },
     async deadlines() {
       await wait(350);
-      requireMoodle();
       return { deadlines: build(prefs), fetchedAt: new Date().toISOString() };
     },
     async courses() {
       await wait(200);
-      requireMoodle();
       const all = build(prefs);
       return Object.entries(courses).map(([code, c]): Course => {
         const mine = all.filter((d) => d.courseCode === code);
@@ -135,17 +129,6 @@ export function createDemoApi(): PrazoApi {
     async moodle() {
       return moodle;
     },
-    async moodleLogin({ username, password }) {
-      await wait(1200);
-      if (!username.trim() || password.length < 3) throw new ApiError('Usuário ou senha inválidos', 422, 'invalid_login');
-      moodle = { ...demoAccount, connectedAt: new Date().toISOString(), events: seeds.length };
-      return moodle;
-    },
-    async moodleICal() {
-      await wait(1000);
-      moodle = { ...demoAccount, method: 'ical', fullName: undefined, connectedAt: new Date().toISOString(), events: seeds.length };
-      return moodle;
-    },
     async googleAuth() {
       // Na demonstração não há Google de verdade: a autorização "acontece"
       // logo depois que o navegador fecha.
@@ -155,13 +138,9 @@ export function createDemoApi(): PrazoApi {
     async googleDisconnect() {
       googleAuthorized = false;
     },
-    async moodleDisconnect() {
-      moodle = { connected: false };
-      return moodle;
-    },
+    async logout() {},
     async sync() {
       await wait(1600);
-      requireMoodle();
       const visible = build(prefs).filter((d) => !d.hidden);
       const now = new Date().toISOString();
       lastRun = { startedAt: now, finishedAt: now, ok: true, total: seeds.length, created: lastRun ? 0 : visible.length, updated: lastRun ? visible.length : 0, hidden: seeds.length - visible.length, failed: 0 };

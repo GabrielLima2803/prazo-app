@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect, type ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
+import { useStatus } from '@/api/hooks';
+import { useConnection } from '@/state/connection';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -17,6 +19,17 @@ function icon(active: IconName, inactive: IconName) {
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const router = useRouter();
+  const { onboarding, finishOnboarding } = useConnection();
+  const status = useStatus();
+
+  // Logo depois do login, o passo do Google (só se ainda não estiver conectado).
+  useEffect(() => {
+    if (!onboarding || !status.data) return;
+    finishOnboarding();
+    if (!status.data.google.authorized) router.push('/google');
+  }, [onboarding, status.data, finishOnboarding, router]);
+
   return (
     <Tabs
       screenOptions={{

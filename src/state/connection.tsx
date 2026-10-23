@@ -5,6 +5,7 @@ import { createDemoApi } from '@/api/demo';
 import type { PrazoApi } from '@/api/types';
 import { storage } from '@/lib/storage';
 
+/** server: sessão emitida pelo servidor depois do login com o Moodle. */
 export type Connection = { mode: 'demo' } | { mode: 'server'; baseUrl: string; token: string };
 
 interface ConnectionState {
@@ -13,7 +14,10 @@ interface ConnectionState {
   api: PrazoApi | null;
   /** Identifica a conexão atual; entra nas query keys para não misturar dados. */
   key: string;
+  /** Acabou de entrar: mostrar o passo do Google antes dos prazos. */
+  onboarding: boolean;
   connect(c: Connection): Promise<void>;
+  finishOnboarding(): void;
   disconnect(): Promise<void>;
 }
 
@@ -28,6 +32,7 @@ function apiFor(c: Connection | null): PrazoApi | null {
 export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [connection, setConnection] = useState<Connection | null>(null);
+  const [onboarding, setOnboarding] = useState(false);
 
   useEffect(() => {
     storage
@@ -37,26 +42,35 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       .finally(() => setReady(true));
   }, []);
 
+  const api = useMemo(() => apiFor(connection), [connection]);
+
   const connect = useCallback(async (c: Connection) => {
     await storage.set(STORAGE_KEY, JSON.stringify(c));
+    setOnboarding(true);
     setConnection(c);
   }, []);
 
+  // Sai mesmo se o servidor estiver fora: a sessão local some de qualquer jeito.
   const disconnect = useCallback(async () => {
+    await api?.logout().catch(() => undefined);
     await storage.remove(STORAGE_KEY);
     setConnection(null);
-  }, []);
+  }, [api]);
+
+  const finishOnboarding = useCallback(() => setOnboarding(false), []);
 
   const value = useMemo<ConnectionState>(
     () => ({
       ready,
       connection,
-      api: apiFor(connection),
+      api,
       key: connection ? (connection.mode === 'demo' ? 'demo' : connection.baseUrl) : 'none',
+      onboarding,
       connect,
+      finishOnboarding,
       disconnect,
     }),
-    [ready, connection, connect, disconnect],
+    [ready, connection, api, onboarding, connect, finishOnboarding, disconnect],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

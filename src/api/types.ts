@@ -89,6 +89,11 @@ export interface MoodleLogin {
   password: string;
 }
 
+export interface LoginResponse {
+  token: string;
+  moodle: MoodleStatus;
+}
+
 export interface PrazoApi {
   status(): Promise<Status>;
   meta(): Promise<Meta>;
@@ -98,9 +103,7 @@ export interface PrazoApi {
   savePreferences(p: Preferences): Promise<Preferences>;
   sync(): Promise<Run>;
   moodle(): Promise<MoodleStatus>;
-  moodleLogin(req: MoodleLogin): Promise<MoodleStatus>;
-  moodleICal(icalUrl: string): Promise<MoodleStatus>;
-  moodleDisconnect(): Promise<MoodleStatus>;
   googleAuth(returnTo?: string): Promise<{ authUrl: string }>;
+  logout(): Promise<void>;
   googleDisconnect(): Promise<void>;
 }

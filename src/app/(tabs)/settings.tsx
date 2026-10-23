@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useConnectGoogle,
   useDisconnectGoogle,
-  useDisconnectMoodle,
   useMeta,
   useMoodle,
   usePreferences,
@@ -47,18 +45,8 @@ export default function SettingsScreen() {
   const save = useSavePreferences();
   const sync = useSyncNow();
   const moodle = useMoodle();
-  const disconnectMoodle = useDisconnectMoodle();
   const connectGoogle = useConnectGoogle();
   const disconnectGoogle = useDisconnectGoogle();
-  const router = useRouter();
-
-  const confirmMoodleLogout = () => {
-    if (Platform.OS === 'web') return void disconnectMoodle.mutate();
-    Alert.alert('Sair do Moodle', 'O Prazo para de buscar os seus prazos até você conectar de novo.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: () => disconnectMoodle.mutate() },
-    ]);
-  };
 
   const current: Preferences | undefined = prefs.data;
   const update = (patch: Partial<Preferences>) => current && save.mutate({ ...current, ...patch });
@@ -77,11 +65,12 @@ export default function SettingsScreen() {
     update({ reminders: { ...current.reminders, [t]: next } });
   };
 
-  const confirmDisconnect = () => {
+  // Sair encerra só a sessão deste aparelho: a agenda continua sincronizando.
+  const confirmLogout = () => {
     if (Platform.OS === 'web') return void disconnect();
-    Alert.alert('Trocar conexão', 'Você volta para a tela de conexão. As preferências continuam salvas no servidor.', [
+    Alert.alert('Sair', 'A sua agenda continua sendo atualizada. Para voltar, é só entrar com o Moodle de novo.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Desconectar', style: 'destructive', onPress: disconnect },
+      { text: 'Sair', style: 'destructive', onPress: disconnect },
     ]);
   };
 
@@ -93,33 +82,22 @@ export default function SettingsScreen() {
     <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingTop: insets.top + spacing.lg, paddingBottom: spacing.xxl }}>
       <Text variant="display">Ajustes</Text>
 
-      <SectionTitle title="Moodle" />
+      <SectionTitle title="Conta" />
       <Card style={{ gap: spacing.lg }}>
         <View style={styles.row}>
-          <IconTile icon="school" color={moodle.data?.connected ? '#F98012' : colors.textSubtle} />
+          <IconTile icon="school" color="#F98012" />
           <View style={{ flex: 1 }}>
             <Text variant="headline" numberOfLines={1}>
-              {moodle.data?.connected ? (moodle.data.fullName ?? moodle.data.siteName ?? 'Conta conectada') : 'Não conectado'}
+              {connection?.mode === 'demo' ? 'Modo demonstração' : (moodle.data?.fullName ?? moodle.data?.siteName ?? 'Conta do Moodle')}
             </Text>
             <Text variant="caption" tone="muted" numberOfLines={1}>
-              {moodle.data?.connected
-                ? `${moodle.data.baseUrl?.replace('https://', '') ?? ''}${moodle.data.method === 'ical' ? ' · URL do calendário' : moodle.data.method === 'env' ? ' · configurado no servidor' : ''}`
-                : 'Conecte para trazer os seus prazos'}
+              {connection?.mode === 'demo'
+                ? 'Dados de exemplo, nada vai para o Google'
+                : `${moodle.data?.baseUrl?.replace('https://', '') ?? 'Moodle'}${moodle.data?.method === 'ical' ? ' · pelo calendário' : ''}`}
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Button
-            label={moodle.data?.connected ? 'Trocar conta' : 'Conectar Moodle'}
-            variant={moodle.data?.connected ? 'secondary' : 'primary'}
-            icon="log-in-outline"
-            onPress={() => router.push('/moodle')}
-            style={{ flex: 1 }}
-          />
-          {moodle.data?.connected && moodle.data.method !== 'env' && (
-            <Button label="Sair" variant="ghost" icon="log-out-outline" loading={disconnectMoodle.isPending} onPress={confirmMoodleLogout} />
-          )}
-        </View>
+        <Button label={connection?.mode === 'demo' ? 'Sair da demonstração' : 'Sair'} variant="secondary" icon="log-out-outline" onPress={confirmLogout} />
       </Card>
 
       <SectionTitle title="Google Agenda" />
@@ -247,20 +225,6 @@ export default function SettingsScreen() {
             </View>
           );
         })}
-      </Card>
-
-      <SectionTitle title="Conexão" />
-      <Card style={{ gap: spacing.lg }}>
-        <View style={styles.row}>
-          <IconTile icon={connection?.mode === 'demo' ? 'flask' : 'server'} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text variant="headline">{connection?.mode === 'demo' ? 'Modo demonstração' : 'Servidor Prazo'}</Text>
-            <Text variant="caption" tone="muted" numberOfLines={1}>
-              {connection?.mode === 'server' ? connection.baseUrl : 'Dados de exemplo, nada é enviado ao Google'}
-            </Text>
-          </View>
-        </View>
-        <Button label="Trocar conexão" variant="secondary" icon="swap-horizontal" onPress={confirmDisconnect} />
       </Card>
 
       <Text variant="caption" tone="subtle" style={{ textAlign: 'center', marginTop: spacing.xl }}>

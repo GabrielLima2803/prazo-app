@@ -42,7 +42,7 @@ export function Empty({ icon, title, message }: EmptyProps) {
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorState({ message, onRetry, retryLabel = 'Tentar de novo' }: { message: string; onRetry?: () => void; retryLabel?: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.center, { paddingVertical: spacing.xxl * 2 }]}>
@@ -53,7 +53,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <Text tone="muted" style={{ textAlign: 'center' }}>
         {message}
       </Text>
-      {onRetry && <Button label="Tentar de novo" variant="secondary" icon="refresh" onPress={onRetry} style={{ marginTop: spacing.sm }} />}
+      {onRetry && <Button label={retryLabel} variant="secondary" icon="refresh" onPress={onRetry} style={{ marginTop: spacing.sm }} />}
     </View>
   );
 }

@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import { useDeadlines, useRefreshDeadlines, useStatus } from '@/api/hooks';
 import type { Deadline } from '@/api/types';
-import { ConnectMoodleCTA } from '@/components/ConnectMoodleCTA';
 import { DeadlineCard } from '@/components/DeadlineCard';
 import { NextUpCard } from '@/components/NextUpCard';
 import { Notice } from '@/components/Notice';
@@ -17,6 +16,7 @@ import { Empty, ErrorState, Loading } from '@/components/States';
 import { Text } from '@/components/Text';
 import { dueOf, formatFullDate, greeting, groupByDay } from '@/lib/dates';
 import { useNow } from '@/lib/useNow';
+import { useConnection } from '@/state/connection';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -33,6 +33,7 @@ export default function DeadlinesScreen() {
   const refresh = useRefreshDeadlines();
   const status = useStatus();
   const router = useRouter();
+  const { disconnect } = useConnection();
 
   const visible = useMemo(() => (data?.deadlines ?? []).filter((d) => !d.hidden), [data]);
   const upcoming = useMemo(() => visible.filter((d) => dueOf(d).getTime() >= now), [visible, now]);
@@ -54,7 +55,8 @@ export default function DeadlinesScreen() {
   };
 
   if (isPending) return <Loading />;
-  if (error instanceof ApiError && error.code === 'moodle_not_connected') return <ConnectMoodleCTA />;
+  if (error instanceof ApiError && error.code === 'moodle_not_connected')
+    return <ErrorState message="A conta do Moodle foi desconectada no servidor. Entre de novo." onRetry={disconnect} retryLabel="Entrar de novo" />;
   if (error) return <ErrorState message={error.message} onRetry={refetch} />;
 
   const header = (

@@ -1,5 +1,5 @@
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/client';
 import { ConnectionProvider, useConnection } from '@/state/connection';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -33,7 +34,21 @@ function Splash() {
 
 function Navigator() {
   const { colors, scheme } = useTheme();
-  const { ready, connection } = useConnection();
+  const { ready, connection, disconnect } = useConnection();
+  const queryClient = useQueryClient();
+
+  // Sessão expirada ou revogada: volta para o login em vez de mostrar erro.
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        const error = event.query.state.error;
+        if (event.type === 'updated' && error instanceof ApiError && error.code === 'unauthorized') {
+          queryClient.clear();
+          disconnect();
+        }
+      }),
+    [queryClient, disconnect],
+  );
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.background);
@@ -54,10 +69,10 @@ function Navigator() {
         <Stack.Protected guard={connection !== null}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="deadline/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="moodle" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="google" options={{ animation: 'fade', gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Protected guard={connection === null}>
-          <Stack.Screen name="connect" options={{ animation: 'fade' }} />
+          <Stack.Screen name="login" options={{ animation: 'fade' }} />
         </Stack.Protected>
       </Stack>
     </>

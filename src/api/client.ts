@@ -1,4 +1,16 @@
-import type { Course, DeadlineList, Meta, MoodleStatus, PrazoApi, Preferences, Run, Status } from './types';
+import type { Course, DeadlineList, LoginResponse, Meta, MoodleLogin, MoodleStatus, PrazoApi, Preferences, Run, Status } from './types';
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    /** Código estável do servidor, ex.: "unauthorized", "invalid_login". */
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 /** Garante coleções vazias mesmo se o servidor mandar null. */
 export function normalizePreferences(p: Partial<Preferences> | null): Preferences {
@@ -10,48 +22,48 @@ export function normalizePreferences(p: Partial<Preferences> | null): Preference
   };
 }
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status?: number,
-    /** Código estável do servidor, ex.: "moodle_not_connected", "invalid_login". */
-    readonly code?: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 const TIMEOUT_MS = 15_000;
 // POST /sync espera a sincronização inteira no servidor.
 const SYNC_TIMEOUT_MS = 4 * 60_000;
+// O login passa pelo Moodle e ainda baixa o calendário para conferir.
+const LOGIN_TIMEOUT_MS = 60_000;
 
-export function createHttpApi(baseUrl: string, token: string): PrazoApi {
-  const root = baseUrl.replace(/\/+$/, '');
-
-  async function request<T>(path: string, init: RequestInit = {}, timeout = TIMEOUT_MS): Promise<T> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    let res: Response;
-    try {
-      res = await fetch(root + path, {
-        ...init,
-        signal: controller.signal,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init.headers },
-      });
-    } catch (e) {
-      const aborted = e instanceof Error && e.name === 'AbortError';
-      throw new ApiError(aborted ? 'O servidor demorou demais para responder.' : 'Não foi possível alcançar o servidor. Ele está ligado e na mesma rede?');
-    } finally {
-      clearTimeout(timer);
-    }
-    const body = await res.json().catch(() => null);
-    if (!res.ok) {
-      const msg = res.status === 401 ? 'Token inválido.' : (body?.error ?? `Erro ${res.status}`);
-      throw new ApiError(msg, res.status, body?.code);
-    }
-    return body as T;
+async function send<T>(root: string, path: string, init: RequestInit, timeout: number, token?: string): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  let res: Response;
+  try {
+    res = await fetch(root + path, {
+      ...init,
+      signal: controller.signal,
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), 'Content-Type': 'application/json', ...init.headers },
+    });
+  } catch (e) {
+    const aborted = e instanceof Error && e.name === 'AbortError';
+    throw new ApiError(aborted ? 'O servidor demorou demais para responder.' : 'Sem conexão com o servidor do Prazo. Confira a internet e tente de novo.');
+  } finally {
+    clearTimeout(timer);
   }
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(body?.error ?? `Erro ${res.status}`, res.status, body?.code);
+  return body as T;
+}
+
+const trim = (url: string) => url.replace(/\/+$/, '');
+
+/** Entrada no app: troca o login do Moodle por uma sessão do Prazo. */
+export function createAuthApi(server: string) {
+  const root = trim(server);
+  return {
+    login: (req: MoodleLogin) => send<LoginResponse>(root, '/auth/login', { method: 'POST', body: JSON.stringify(req) }, LOGIN_TIMEOUT_MS),
+    loginICal: (icalUrl: string) =>
+      send<LoginResponse>(root, '/auth/ical', { method: 'POST', body: JSON.stringify({ icalUrl }) }, LOGIN_TIMEOUT_MS),
+  };
+}
+
+export function createHttpApi(server: string, token: string): PrazoApi {
+  const root = trim(server);
+  const request = <T,>(path: string, init: RequestInit = {}, timeout = TIMEOUT_MS) => send<T>(root, path, init, timeout, token);
 
   return {
     status: () => request<Status>('/api/v1/status'),
@@ -63,11 +75,8 @@ export function createHttpApi(baseUrl: string, token: string): PrazoApi {
       request<Preferences>('/api/v1/preferences', { method: 'PUT', body: JSON.stringify(p) }).then(normalizePreferences),
     sync: () => request<Run>('/api/v1/sync', { method: 'POST' }, SYNC_TIMEOUT_MS),
     moodle: () => request<MoodleStatus>('/api/v1/moodle'),
-    // Login e teste do calendário passam pelo Moodle: dão mais tempo.
-    moodleLogin: (req) => request<MoodleStatus>('/api/v1/moodle/login', { method: 'POST', body: JSON.stringify(req) }, 60_000),
-    moodleICal: (icalUrl) => request<MoodleStatus>('/api/v1/moodle/ical', { method: 'POST', body: JSON.stringify({ icalUrl }) }, 60_000),
-    moodleDisconnect: () => request<MoodleStatus>('/api/v1/moodle', { method: 'DELETE' }),
     googleAuth: (returnTo) => request<{ authUrl: string }>('/api/v1/google/auth', { method: 'POST', body: JSON.stringify({ returnTo }) }),
     googleDisconnect: () => request<void>('/api/v1/google', { method: 'DELETE' }),
+    logout: () => request<void>('/api/v1/auth/logout', { method: 'POST' }),
   };
 }

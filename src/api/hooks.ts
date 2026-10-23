@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 import { useConnection } from '@/state/connection';
 
-import type { MoodleLogin, Preferences } from './types';
+import type { Preferences } from './types';
 
 function useApi() {
   const { api, key } = useConnection();
@@ -81,38 +81,6 @@ export function useSyncNow() {
 export function useMoodle() {
   const { api, key } = useApi();
   return useQuery({ queryKey: [key, 'moodle'], queryFn: () => api.moodle() });
-}
-
-type ConnectRequest = { kind: 'login'; login: MoodleLogin } | { kind: 'ical'; icalUrl: string };
-
-/** Conecta o Moodle e recarrega tudo: os prazos passam a vir da conta nova. */
-export function useConnectMoodle() {
-  const { api, key } = useApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (req: ConnectRequest) => (req.kind === 'login' ? api.moodleLogin(req.login) : api.moodleICal(req.icalUrl)),
-    onSuccess: (status) => {
-      qc.setQueryData([key, 'moodle'], status);
-      qc.resetQueries({ queryKey: [key, 'deadlines'] });
-      qc.resetQueries({ queryKey: [key, 'courses'] });
-      qc.invalidateQueries({ queryKey: [key, 'status'] });
-    },
-  });
-}
-
-export function useDisconnectMoodle() {
-  const { api, key } = useApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.moodleDisconnect(),
-    // reset (e não remove): as telas abertas voltam ao estado inicial e
-    // buscam de novo, recebendo "moodle_not_connected".
-    onSuccess: (status) => {
-      qc.setQueryData([key, 'moodle'], status);
-      qc.resetQueries({ queryKey: [key, 'deadlines'] });
-      qc.resetQueries({ queryKey: [key, 'courses'] });
-    },
-  });
 }
 
 const GOOGLE_POLL_MS = 2_000;
