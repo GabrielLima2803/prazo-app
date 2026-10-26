@@ -26,6 +26,7 @@ const INSTANCES = [
 
 const ERRORS: Record<string, string> = {
   invalid_login: 'Usuário ou senha incorretos.',
+  moodle_auth_down: 'O login do Moodle da UDESC está fora do ar agora. Não é a sua senha — tente de novo mais tarde.',
   host_not_allowed: 'Este Moodle ainda não é atendido pelo Prazo.',
   too_many_users: 'O Prazo atingiu o limite de usuários. Fale com quem te convidou.',
   too_many_attempts: 'Muitas tentativas. Espere um minuto e tente de novo.',
