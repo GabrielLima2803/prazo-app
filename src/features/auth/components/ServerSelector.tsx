@@ -1,16 +1,28 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Field, Text } from '@/shared/components';
+import { isCustomServer } from '@/core/config';
+import { Field, Notice, Text } from '@/shared/components';
 import { stripProtocol } from '@/shared/lib/text';
+import { spacing } from '@/theme';
 
-/** Mostra o servidor do Prazo em uso e permite trocá-lo. */
-export function ServerSelector({ value, onChange }: { value: string; onChange(v: string): void }) {
+import { CUSTOM_SERVER_WARNING, INVALID_SERVER_MESSAGE } from '../messages';
+
+interface Props {
+  value: string;
+  valid: boolean;
+  onChange(v: string): void;
+}
+
+/** Mostra o servidor do Prazo em uso e permite trocá-lo, com aviso. */
+export function ServerSelector({ value, valid, onChange }: Props) {
   const [editing, setEditing] = useState(false);
   if (editing) {
     return (
       <View style={styles.field}>
         <Field label="Servidor do Prazo" value={value} onChangeText={onChange} keyboardType="url" />
+        {!valid && <Notice tone="danger" message={INVALID_SERVER_MESSAGE} />}
+        {valid && isCustomServer(value) && <Notice tone="info" message={CUSTOM_SERVER_WARNING} />}
       </View>
     );
   }
@@ -22,5 +34,5 @@ export function ServerSelector({ value, onChange }: { value: string; onChange(v:
 }
 
 const styles = StyleSheet.create({
-  field: { alignSelf: 'stretch' },
+  field: { alignSelf: 'stretch', gap: spacing.sm },
 });

@@ -4,7 +4,7 @@ import type { PrazoApi } from '@/core/api';
 export type Connection = { mode: 'demo' } | { mode: 'server'; baseUrl: string; token: string };
 
 /** Por que o app voltou para o login, para explicar ao usuário. */
-export type LogoutReason = 'session_expired' | 'moodle_reauth';
+export type LogoutReason = 'session_expired' | 'moodle_reauth' | 'account_deleted';
 
 export interface ConnectionState {
   ready: boolean;

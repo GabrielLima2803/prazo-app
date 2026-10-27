@@ -2,6 +2,7 @@ import { endpoints, REFRESH_QUERY } from './endpoints';
 import { createHttp, timeouts } from './http';
 import { normalizePreferences } from './normalize';
 import type {
+  AccountExport,
   AuthApi,
   Course,
   DeadlineList,
@@ -38,5 +39,7 @@ export function createHttpApi(server: string, token: string): PrazoApi {
     googleAuth: (returnTo) => request<GoogleAuthResponse>(endpoints.googleAuth, { method: 'POST', body: { returnTo } }),
     googleDisconnect: () => request<void>(endpoints.google, { method: 'DELETE' }),
     logout: () => request<void>(endpoints.auth.logout, { method: 'POST' }),
+    exportAccount: () => request<AccountExport>(endpoints.accountExport),
+    deleteAccount: () => request<void>(endpoints.account, { method: 'DELETE' }),
   };
 }

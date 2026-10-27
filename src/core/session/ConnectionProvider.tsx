@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { secureStorage, storageKeys } from '@/core/storage/secureStorage';
@@ -12,6 +13,9 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [onboarding, setOnboarding] = useState(false);
   const [logoutReason, setLogoutReason] = useState<LogoutReason | null>(null);
+  // Dados de uma conta nunca podem aparecer para a próxima que entrar no
+  // mesmo aparelho: o cache é limpo ao entrar e ao sair.
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     secureStorage
@@ -25,20 +29,22 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async (c: Connection) => {
     await secureStorage.set(storageKeys.connection, JSON.stringify(c));
+    queryClient.clear();
     setLogoutReason(null);
     setOnboarding(true);
     setConnection(c);
-  }, []);
+  }, [queryClient]);
 
   // Sai mesmo se o servidor estiver fora: a sessão local some de qualquer jeito.
   const disconnect = useCallback(
     async (reason?: LogoutReason) => {
       await api?.logout().catch(() => undefined);
       await secureStorage.remove(storageKeys.connection);
+      queryClient.clear();
       setLogoutReason(reason ?? null);
       setConnection(null);
     },
-    [api],
+    [api, queryClient],
   );
 
   const finishOnboarding = useCallback(() => setOnboarding(false), []);
