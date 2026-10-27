@@ -31,23 +31,41 @@ Celular e computador precisam estar na mesma rede Wi-Fi. Sem servidor, use **"Ex
 
 ## Estrutura
 
+Arquitetura por feature. As dependências só descem: `app → features → core → shared → theme`.
+
 ```
 src/
-├── app/                 rotas (Expo Router)
-│   ├── _layout.tsx      providers, fontes e a pilha protegida por conexão
-│   ├── connect.tsx      conexão com o servidor ou modo demonstração
-│   ├── (tabs)/          Prazos, Disciplinas, Ajustes
-│   └── deadline/[id]    detalhe do prazo (modal)
-├── api/                 tipos (espelham internal/api do Go), cliente HTTP, demo, hooks do React Query
-├── components/          UI reutilizável
-├── lib/                 datas em pt-BR, armazenamento seguro, ícones
-├── state/               conexão atual (SecureStore)
-└── theme/               tokens de cor, espaçamento e tipografia
+├── app/                    rotas (Expo Router), finas: só reexportam telas das features
+├── features/               uma pasta por domínio, com o seu index.ts como API pública
+│   ├── auth/               login com o Moodle ou pela URL do calendário
+│   ├── deadlines/          lista, detalhe, urgência, agrupamento por dia
+│   ├── courses/            cor e visibilidade de cada disciplina
+│   ├── preferences/        hooks e transformações puras das preferências
+│   ├── google/             conectar o Google Agenda e o passo de onboarding
+│   ├── sync/               status e "sincronizar agora"
+│   ├── account/            conta do Moodle conectada
+│   └── settings/           tela de Ajustes, composta por seções
+├── core/
+│   ├── api/                tipos (espelham internal/api do Go), cliente HTTP, endpoints, erros, demo
+│   ├── query/              QueryClient, query keys e useApi
+│   ├── session/            conexão atual (SecureStore) e logout por erro de sessão
+│   ├── storage/            armazenamento seguro
+│   ├── config/             variáveis de ambiente
+│   └── providers/          providers do app
+├── shared/
+│   ├── components/         UI kit genérico (Button, Card, Field, Notice…)
+│   ├── hooks/              useNow, useScreenPadding
+│   ├── lib/                tempo, datas em pt-BR, durações, texto, haptics
+│   └── types/
+└── theme/                  tokens: cores, espaçamento, raios, tamanhos, opacidades, tipografia
 ```
 
-- **Dados:** React Query com cache por conexão e atualização otimista nas preferências.
+Dentro de cada feature: `api.ts` (hooks do React Query), `components/`, `hooks/`, `lib/` (funções puras), `constants.ts`, `screens/` e `index.ts`.
+
+- **Sem números mágicos:** medidas vêm de `theme/` (`spacing`, `radius`, `size`, `iconSize`, `opacity`, `alpha`) e durações de `shared/lib/time.ts`.
+- **Dados:** React Query com cache por conexão (`core/query/keys.ts`) e atualização otimista nas preferências.
 - **Token:** guardado no Keychain/Keystore via `expo-secure-store`.
-- **Contrato:** `src/api/types.ts` espelha `internal/api/types.go` do servidor.
+- **Contrato:** `src/core/api/types.ts` espelha `internal/api/types.go` do servidor.
 
 ## Qualidade
 
