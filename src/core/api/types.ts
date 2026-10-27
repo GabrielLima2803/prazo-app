@@ -118,6 +118,16 @@ export interface GoogleAuthResponse {
   authUrl: string;
 }
 
+/** Cópia dos dados do usuário (LGPD); nunca traz credenciais. */
+export interface AccountExport {
+  exportedAt: string;
+  user: { id: string; host: string; moodleUserId: number; name?: string; createdAt: string };
+  moodle: MoodleStatus;
+  google: Pick<GoogleStatus, 'authorized' | 'calendarName'>;
+  preferences: Preferences;
+  note: string;
+}
+
 export interface PrazoApi {
   status(): Promise<Status>;
   meta(): Promise<Meta>;
@@ -130,6 +140,9 @@ export interface PrazoApi {
   googleAuth(returnTo?: string): Promise<GoogleAuthResponse>;
   logout(): Promise<void>;
   googleDisconnect(): Promise<void>;
+  exportAccount(): Promise<AccountExport>;
+  /** Apaga tudo no servidor e encerra todas as sessões. */
+  deleteAccount(): Promise<void>;
 }
 
 export interface AuthApi {

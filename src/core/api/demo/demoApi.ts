@@ -80,6 +80,20 @@ export function createDemoApi(): PrazoApi {
       googleAuthorized = false;
     },
     async logout() {},
+    async exportAccount() {
+      return {
+        exportedAt: new Date().toISOString(),
+        user: { id: 'demo', host: 'moodle.joinville.udesc.br', moodleUserId: 0, name: moodle.fullName, createdAt: moodle.connectedAt ?? '' },
+        moodle,
+        google: { authorized: googleAuthorized, calendarName: DEMO_CALENDAR_NAME },
+        preferences: prefs,
+        note: 'Modo demonstração: nada disso está em um servidor.',
+      };
+    },
+    async deleteAccount() {
+      prefs = EMPTY_PREFERENCES;
+      lastRun = null;
+    },
     async sync() {
       await sleep(latency.sync);
       const total = DEMO_SEEDS.length;

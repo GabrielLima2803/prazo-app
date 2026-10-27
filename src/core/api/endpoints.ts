@@ -15,7 +15,12 @@ export const endpoints = {
   moodle: `${API_PREFIX}/moodle`,
   google: `${API_PREFIX}/google`,
   googleAuth: `${API_PREFIX}/google/auth`,
+  account: `${API_PREFIX}/account`,
+  accountExport: `${API_PREFIX}/account/export`,
 } as const;
+
+/** Página pública com a política de privacidade e os termos de uso. */
+export const PRIVACY_PATH = '/privacidade';
 
 /** Query string que pede ao servidor para ignorar o cache do Moodle. */
 export const REFRESH_QUERY = '?refresh=1';
