@@ -20,7 +20,12 @@ const LOGIN_ERRORS: Partial<Record<string, string>> = {
 export const LOGOUT_REASON_MESSAGES: Record<LogoutReason, string> = {
   moodle_reauth: 'Sua senha do Moodle mudou. Entre de novo para continuar sincronizando — suas preferências estão salvas.',
   session_expired: 'Sua sessão terminou. Entre de novo.',
+  account_deleted: 'Sua conta e seus dados foram excluídos do servidor do Prazo.',
 };
+
+export const INVALID_SERVER_MESSAGE = 'O servidor precisa ser um endereço https://.';
+export const CUSTOM_SERVER_WARNING =
+  'Este não é o servidor oficial do Prazo. A sua senha do Moodle será enviada para ele: só continue se confiar em quem o mantém.';
 
 /** Mensagem amigável para o código do servidor, ou a mensagem crua do erro. */
 export function loginErrorMessage(e: unknown): string {
