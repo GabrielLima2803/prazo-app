@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { createAuthApi } from '@/core/api';
-import { DEFAULT_SERVER } from '@/core/config';
+import { DEFAULT_SERVER, isValidServerUrl } from '@/core/config';
 import { useConnection } from '@/core/session';
 import { haptics } from '@/shared/lib/haptics';
 
@@ -24,7 +24,9 @@ export function useLoginForm() {
   const [loading, setLoading] = useState(false);
 
   const baseUrl = instance === CUSTOM_INSTANCE ? customUrl : (MOODLE_INSTANCES.find((i) => i.id === instance)?.url ?? '');
-  const canSubmit = mode === 'login' ? isFilled(baseUrl) && isFilled(username) && password !== '' : isFilled(icalUrl);
+  const serverValid = isValidServerUrl(server);
+  const credentialsFilled = mode === 'login' ? isFilled(baseUrl) && isFilled(username) && password !== '' : isFilled(icalUrl);
+  const canSubmit = serverValid && credentialsFilled;
 
   const toggleMode = () => {
     setError(null);
@@ -67,6 +69,7 @@ export function useLoginForm() {
     setIcalUrl,
     server,
     setServer,
+    serverValid,
     error,
     loading,
     canSubmit,

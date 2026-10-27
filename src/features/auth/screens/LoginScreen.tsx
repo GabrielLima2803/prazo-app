@@ -7,6 +7,7 @@ import { Button, Notice, Text } from '@/shared/components';
 import { spacing, useTheme } from '@/theme';
 
 import { BrandHeader } from '../components/BrandHeader';
+import { ConsentNote } from '../components/ConsentNote';
 import { CredentialsForm } from '../components/CredentialsForm';
 import { ICalForm } from '../components/ICalForm';
 import { ServerSelector } from '../components/ServerSelector';
@@ -54,13 +55,14 @@ export function LoginScreen() {
         <View style={styles.actions}>
           <Button label={copy.submit} icon="log-in-outline" loading={form.loading} disabled={!form.canSubmit} onPress={form.submit} />
           <Button label={copy.switchLabel} variant="ghost" icon={copy.switchIcon} onPress={form.toggleMode} />
+          <ConsentNote server={form.server} />
         </View>
 
         <View style={styles.footer}>
           <Text variant="caption" tone="primary" onPress={form.enterDemo} accessibilityRole="button">
             Só quero ver como funciona
           </Text>
-          <ServerSelector value={form.server} onChange={form.setServer} />
+          <ServerSelector value={form.server} valid={form.serverValid} onChange={form.setServer} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
