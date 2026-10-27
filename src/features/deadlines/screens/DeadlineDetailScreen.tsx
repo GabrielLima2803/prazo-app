@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Empty, Loading } from '@/shared/components';
 import { useNow } from '@/shared/hooks/useNow';
+import { isSafeExternalUrl, openExternalUrl } from '@/shared/lib/links';
 import { size, spacing, useTheme } from '@/theme';
 
 import { useDeadline } from '../api';
@@ -41,7 +42,12 @@ export function DeadlineDetailScreen() {
           { paddingBottom: insets.bottom + spacing.lg, backgroundColor: colors.background, borderTopColor: colors.border },
         ]}
       >
-        <Button label="Abrir no Moodle" icon="open-outline" onPress={() => Linking.openURL(deadline.url)} />
+        <Button
+          label="Abrir no Moodle"
+          icon="open-outline"
+          disabled={!isSafeExternalUrl(deadline.url)}
+          onPress={() => openExternalUrl(deadline.url)}
+        />
       </View>
     </View>
   );
