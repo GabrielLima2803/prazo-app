@@ -7,6 +7,7 @@ import { useScreenPadding } from '@/shared/hooks/useScreenPadding';
 import { AccountSection } from '../components/AccountSection';
 import { AppFooter } from '../components/AppFooter';
 import { GoogleSection } from '../components/GoogleSection';
+import { PrivacySection } from '../components/PrivacySection';
 import { RemindersSection } from '../components/RemindersSection';
 import { VisibleTypesSection } from '../components/VisibleTypesSection';
 
@@ -20,6 +21,7 @@ export function SettingsScreen() {
       <GoogleSection now={now} />
       <RemindersSection />
       <VisibleTypesSection />
+      <PrivacySection />
       <AppFooter />
     </ScrollView>
   );
